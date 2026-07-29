@@ -1,0 +1,16 @@
+---
+.title = "Devlog - 2026",
+.date = .date("2026-01-01T00:00:00"),
+.layout = "devlog.shtml",
+---
+[]($section.id('about'))
+
+This is a non-exhaustive list of changes to various projects.
+
+Looking for a devlog from previous years? [click here]($link.page("devlog"))
+
+
+# [First Devlog!]($section.id("2026-07-29T00:00:00"))
+#### Tags: Website
+
+Hello! As of today I have this section of my website working! I have alot to talk about in the near future!

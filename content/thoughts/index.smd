@@ -1,0 +1,14 @@
+---
+.title = "Random Thoughts Archive",
+.date = .date("2026-01-01T00:00:00"),
+.layout = "devlog-archive.shtml",
+.alternatives = [.{
+    .name = "rss",
+    .layout = "devlog.xml",
+    .output = "index.xml",
+}],
+---
+
+This page has the same format as the devlog except far less organized. If I find something interesting I'll put it here, almost like a glorified twitter feed.
+
+The latest devlog year is also available [via RSS feed]($link.alternative('rss')).

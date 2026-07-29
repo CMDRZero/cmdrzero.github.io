@@ -1,0 +1,47 @@
+---
+.title = "About Me",
+.date = .date("2026-07-25T00:00:00"),
+.layout = "index.shtml",
+---
+
+My name is Zero, I do computer science unprofessionally with a passion for Compilers, Worldbuilding Tools, and Solvers.
+I, along with [Malcolm Roalson](https://github.com/MaliciousFiles) are the creators of BRANCH-32, superceding [LALU-3.0](https://github.com/MaliciousFiles/LALU-3.0). 
+I am developing my dream programming language LLPC and have been since 2024. 
+I also have a passion for linguistics and conlanging (the art of making one's own language), specifically naturalistic languages and worldbuilding. Maybe in time a new tab will appear which documents the language.
+
+# Programming languages
+While I have used various languages over the years I predomiantly use two:
+- [Zig](https://codeberg.org/ziglang/zig) is my primary language for tasks which need speed and structural 
+  guarentees. I write alot of random algorithms and game playing agents in Zig for this reason. I also try
+  to give back by working on various PRs for the language.
+
+- Python is the langauge I use as my goto for hacking out a project. Its currently the language backing LLPC
+  while I build a concrete architecture and then I can rebuild it in Zig for the optimization passes. 
+
+# What is this Site?
+I have been telling myself for the las six years that I was going to make a blog, but it seemed too daunting. 
+Then I saw [Zine](https://zine-ssg.io) and decided today's the day. So here I am, making my blog. As you can see at the top
+this site has 3 major parts: Blogs, Devlogs, and Thoughts. 
+
+- Blogs are my full length organized posts about anything, but often compsci. These are organized and hopefully
+  teach the reader something orelse encourage critical thought.
+
+- Devlogs are less organized than Blogs and mostly consist of little updates, kind of like what you might see from
+  a developer on social media. This might be about how I've successfully created a little feature or did something cool.
+
+- Thoughts are just my random thoughts. I might clean them up into a full blog, or maybe itll be a key idea that lets
+  a devlog land. This is also the most likely area for things unrelated to CS to appear. 
+
+I'll update this site whenever I so feel like it but hopefully something like a devlog once a month.
+
+# Current Projects
+ - LLPC, no link yet, getting the newest compiler to a WIP state then I'll link it publicly
+ - [Partially Ordered Operator Precedence](https://codeberg.org/ziglang/zig/pulls/30160) is the current PR I'm maintaining for Zig.
+ - Regalia is a boardgame of which I am writing a very fast bot for. 
+   - Repo will contain the how to play when published.
+ - BRANCH-32, the successor to [LALU-3.0](https://github.com/MaliciousFiles/LALU-3.0). 
+   - The latest version of the emulator is being worked on right now and when working will be published.
+
+# Contact Me
+ - [Github](https://github.com/CMDRZero) is where I primarily upload projects.
+ - [Codeberg](https://codeberg.org/CMDRZero) is where mostly where I work on Zig.

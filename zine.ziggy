@@ -1,0 +1,11 @@
+.zine_version = "0.13.0",
+.site = .simple(.{
+    .title = "Zero's Archive",
+    .host_url = "https://cmdrzero.github.io/",
+    .content_dir_path = "content",
+    .layouts_dir_path = "layouts",
+    .assets_dir_path = "assets",
+    .static_assets = [
+        "Temml.woff2",
+    ],
+}),

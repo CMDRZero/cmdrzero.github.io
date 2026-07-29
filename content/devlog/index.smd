@@ -1,0 +1,14 @@
+---
+.title = "Devlog Archive",
+.date = .date("2026-01-01T00:00:00"),
+.layout = "devlog-archive.shtml",
+.alternatives = [.{
+    .name = "rss",
+    .layout = "devlog.xml",
+    .output = "index.xml",
+}],
+---
+
+This page lists all of my devlogs by year. 
+
+The latest devlog year is also available [via RSS feed]($link.alternative('rss')).

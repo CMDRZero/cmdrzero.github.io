@@ -1,0 +1,12 @@
+---
+.title = "Blog",
+.date = .date("2026-07-25T00:00:00"),
+.layout = "blog.shtml",
+.alternatives = [.{
+    .name = "rss",
+    .layout = "blog.xml",
+    .output = "index.xml",
+}],
+---
+
+Welcome to the blog section. I intend to put out maybe a few of these a year. Alot of these will be about compilers and large CS projects so hopefully if that interests you you might learn something.

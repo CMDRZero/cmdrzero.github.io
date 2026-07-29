@@ -1,0 +1,16 @@
+---
+.title = "Thoughts - 2026",
+.date = .date("2026-01-01T00:00:00"),
+.layout = "thought_devlog.shtml",
+---
+[]($section.id('about'))
+
+This is a non-exhaustive list of my random thoughts worth cataloguing.
+
+Looking for a log from previous years? [click here]($link.page("thoughts"))
+
+
+## [Website Moment]($section.id("2026-07-29T16:52:00"))
+#### Tags: Website
+
+Why is making a website so hard? I just wanted to add tags to the devlog page so one could filter by: `LLPC` `Zig` `Regalia`, etc. Alas no cigar
