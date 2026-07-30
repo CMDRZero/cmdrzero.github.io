@@ -9,6 +9,83 @@ This is a non-exhaustive list of my random thoughts worth cataloguing.
 
 Looking for a log from previous years? [click here]($link.page("thoughts"))
 
+## [Zig Pointer Safety]($section.id("2026-07-30T12:51:00"))
+#### Tags: Ziglang, Memory Safety
+
+Wow, a real post. Ok, I'm writing this because I want to document my thinking. I was playing around with a system inspried by Fil-C for Zig. 
+Its not at all as close to as powerful, but I wanted to be able to get at least a small glimse of it. So I made a special allocator which
+returns types plus a little sha256 hash of the type string before it so that when you load a pointer we can check the hash to ensure the object
+is typed correctly. This actually kind of worked, like it can trap on basic illegal behavior like below:
+
+```zig
+const Local = struct {
+    words: [8] u8,
+    is_auth: u64,
+};
+
+const ptr = try create(init.gpa, Local);
+defer destroy(init.gpa, ptr);
+
+ptr.set(.{
+    .words = "ABCDEDFG".*,
+    .is_auth = 0,
+});
+
+const string: Ptr(u8) = .fromAddr(@ptrCast(ptr.ptr));
+_ = string.get();
+```
+
+We get a runtime panic because the string loading gets angry. This is basically a pretty bad implementation of InvisiCaps. 
+But I've been thinking about this becuase how do we make field pointers safe?
+
+Theres a sort of catch:
+ - in Fil-C: pointers have bounds that ensure even accessing correct mememory from an invalid pointer is illegal. 
+    - Consider this cursed but legal C code: `int *y, *x = ...; _ = x[y-x]`.
+ - With a type-ID system you either hash the type itself which breaks for slices, or you hash the child and add metadata for the pointer type
+   which kind of works.
+
+Ok so lets say we have a pointer inside of the struct. Without type ID's we just inherit the bounds of the outer struct since thats here the 
+InvisiCap is. Now we could put an TypeHash on all fields of structs which bloats the shape and means we have to rebuild all included code.
+This is probably fine if this is internal to the compiler but kind of difficult for me writing a psuedo transpiler. Currently I can just wrap 
+external structs and get all but structural safety. So, We could solve this by instead attaching more InvisiCaps outside the regular one 
+that note that this is a field and pointer to a true lowerbound. 
+
+When we want to load a pointer, we offset the lowerbound to get a pointer to InvisiCaps, then we check if its a field, if so we offset to the true
+lowerbound, then use the upperbound and validate its in range. This DOES work for structs and provides structural safety. When we wrap a struct at
+compile time we compute how many of these fieldCaps are needed and allocate the space, then when we get a field via method on our special pointer type
+we return a pointer with a special InvisiCap low bound. The advantage of this is that our data is non-invasive, its fully outside and thus we can
+wrap say the standard library without particular difficulty. Downside? 4 usizes per field plus the normal 3 extra usizes per stored object.
+
+The invasive approach is simpler and easier, but means I have to write code to transpile every file I want to pull in which is annoying. 
+
+#### More Issues
+
+And none of this solves the issue of Use After Free's. As it currently stands I can mark a special bit in our InvisiCaps noting the data is free, 
+then set the upper bound to the lowerbound. On validation we see the `freed` bit and error, and if we try to free `freed` memory we error with `double free`.
+Ok, so whats the issue? Stack allocated objects and we cant actually use free'd memory. To my understanding, Fil-C genuinely frees the memory via finding all 
+reachable capabilities that point to free'd memory and remapping them to a free'd object singleton and then letting the GC reclaim memory. This is clever 
+but unacceptable for Zig since Zig rejects silent allocations. 
+
+So I have a half solution: Make out Lowerbound instead point to a seperate page of memory where we store the true lowerbound + upperbound + data. Since its out of 
+bounds, we can truely free the memory and keep a dead metadata object to trap. But wait, that means while it does reclaim most of the memory, its not all?
+Ok, so we attach an epoch marker to the dead markers, when we want a new one for a new heap allocation we look for any dead markers and increment the epoch marker if we find one.
+Part of any pointer will be an expected epoch marker which means that if we access memeory right after its free we trap since it says its dead. Then if 
+the memory gets re-used we trap on a UAF since its been reused meaning it *was* freed. 
+
+Yay, problem solved? No.
+
+Stack objects. We dont allow silent allocations, so how do we handle a stack allocation? We cant have metadata on the stack since it will also die when the frame is dead.
+I'm genuinelty stumped here, but I have a half solution.
+
+Assuming we use the non-invasive field tagging system or something like it, we know all of our capabilities are out of bounds for pointers, plus theyre all in a known
+traversable location. So what we *might* be able to do is on function exit, search all of our capabilities for being in the area of the free'd stack. If we find them.
+Add a tag that it was a pointer to free-d local memory. This can't stop however holding onto pointers in flight after a function call. Without a far more invasive check.
+A smart transpiler could also check all live variables tho. Tho I'm not sure how to feel a pointer a pointer to a pointer in the caller frame with a pointer to 
+dead stack memory. Is this too contrived? Maybe, not sure.
+
+Alternatively one could just rewrite al stack allocations as special allocations from a special stack allocator but I dislike this strategy. 
+
+If I make any more progress or think of something new I'll update.
 
 ## [Website Moment]($section.id("2026-07-29T16:52:00"))
 #### Tags: Website
