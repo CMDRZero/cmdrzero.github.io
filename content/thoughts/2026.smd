@@ -9,6 +9,22 @@ This is a non-exhaustive list of my random thoughts worth cataloguing.
 
 Looking for a log from previous years? [click here]($link.page("thoughts"))
 
+## [Trying and Failing (to make a Zig to Zig transpiler)]($section.id("2026-09-03T13:49:00"))
+#### Tags: Ziglang, Memory Safety
+
+If you read the last post, then you would know that memory safety has been only mind. I would love to make the thing I described below work,
+but its driving me crazy, so I'll just opensource the code and come back to it later. What I did was make a scuffed PEG grammar that
+can read Zig, then try and fail to iterate over tree and emit valid Zig code wrapping with my own safety features. I have spent many hours
+and the fact I keep hitting walls is annoying. A brief rant over how needlessly complex this is:
+`a.b()` is ambiguous, it could be a field called b which is callable or a method on a. Arghhh, because arithmetic is defined on multi-pointers I have
+to wrap addition and subtraction. Plus to make locals work I need to wrap every expression result in a special object which includes a type tag. 
+
+Then, much to my display I have to inline some functions like the field syntax but this breaks for things like namespaces, but this corrupts the panic traces.
+Not to mention when I assign to a variable I shouldnt get out the inner value but store the whole object and I have to be careful to pass pointers so 
+it doesnt just copy the inner object and lose the typeguard.
+
+Idk, if this at all sounds interesting its [here](https://github.com/CMDRZero/FailedZigPtrVerif)
+
 ## [Zig Pointer Safety]($section.id("2026-07-30T12:51:00"))
 #### Tags: Ziglang, Memory Safety
 
