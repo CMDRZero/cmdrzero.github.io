@@ -9,7 +9,81 @@ This is a non-exhaustive list of my random thoughts worth cataloguing.
 
 Looking for a log from previous years? [click here]($link.page("thoughts"))
 
-## [Trying and Failing (to make a Zig to Zig transpiler)]($section.id("2026-09-03T13:49:00"))
+## [Trying and Failing (to make a Zig to Zig transpiler)]($section.id("2026-08-05T13:07:00"))
+#### Tags: Ziglang, Python, AI
+
+I know this tag is AI, but I wanted to make a little post because I spent a while yesterday making a fun little project I take a large text file. Then
+extract out semantically important tokens and use a simple montecarlo chain to emit similar text. 
+
+Consider this sentence `this is a test`
+
+We find our tokens by computing each run of characters that occurs at two distinct offsets by "sliding the text past itself"
+```
+this is a test
+   this is a test
+   ..###.....#
+```
+
+Running all of these we see this:
+
+```
+this is a test
+ .............
+  .......#....
+   ..###.....#
+    ..........
+     ....#....
+      ......#.
+       .......
+        ......
+         ...#.
+          #...
+           ...
+            ..
+             #
+ .............
+  ....... ....
+   ..is .....t
+    ..........
+     .... ....
+      ......s.
+       .......
+        ......
+         ...s.
+          t...
+           ...
+            ..
+             t
+```
+
+Which gives us the tokens: `is_`, `t`, `_`, & `s`. These aren't many but we can also generate each standalone character. 
+Then what I did in python for speed is just chunk the message into tokens and compute a probability of next token based on a fixed history of tokens.
+Then for inference we just start with a fixed input and randomly fetch one if it exists orelse shorten our history and repeat. 
+
+Running this on my own posts we get stuff like this:
+
+```
+Why is making a website so hard? I just wanted to add tags to the devlog page 
+so one could known traversable location. So what we might be able to do is on 
+functions like the field syntax but this breaks for slices, or you load a pointer 
+we can truely free’d memory. To my understanding, Fil-C genuinelty stumped here, 
+but I wanted to be able to get at least a small glimse of I make any more progress 
+or think of something new I’ll just copy the inner value but structural safety. 
+So, We could just inherit the bounds of the outer struct at compile time we compute 
+how many hours and the fact I keep hitting walls is annoying. A brief rant over 
+how needlessly complex this is: a.b() is ambiguous, it could be a field called b 
+which is callable or a method on our special pointer type we return a pointer with 
+a special InvisiCaps, 
+```
+
+Its wierd because it ends up stitching a bunch of real looking tokens with real sequences if they only occured once or twice and so it looks normal at a glance
+but actually makes no real sense when read.
+
+Anyways, I thought it was fun making a stupid little Small Language Model. Happy coding!
+
+[Repo](https://github.com/CMDRZero/Shift-Token-Small-Language-Model)
+
+## [Trying and Failing (to make a Zig to Zig transpiler)]($section.id("2026-08-03T13:49:00"))
 #### Tags: Ziglang, Memory Safety
 
 If you read the last post, then you would know that memory safety has been only mind. I would love to make the thing I described below work,
