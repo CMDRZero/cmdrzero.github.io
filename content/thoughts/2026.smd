@@ -9,7 +9,7 @@ This is a non-exhaustive list of my random thoughts worth cataloguing.
 
 Looking for a log from previous years? [click here]($link.page("thoughts"))
 
-## [Trying and Failing (to make a Zig to Zig transpiler)]($section.id("2026-08-05T13:07:00"))
+## [Making a small language model via shift tokens)]($section.id("2026-08-05T13:07:00"))
 #### Tags: Ziglang, Python, AI
 
 I know this tag is AI, but I wanted to make a little post because I spent a while yesterday making a fun little project I take a large text file. Then
