@@ -35,12 +35,15 @@ this site has 3 major parts: Blogs, Devlogs, and Thoughts.
 I'll update this site whenever I so feel like it but hopefully something like a devlog once a month.
 
 # Current Projects
- - LLPC, no link yet, getting the newest compiler to a WIP state then I'll link it publicly
- - [Partially Ordered Operator Precedence](https://codeberg.org/ziglang/zig/pulls/30160) is the current PR I'm maintaining for Zig.
+ - LLPC, no link yet, getting the newest compiler to a WIP state then I'll link it publicly.
  - Regalia is a boardgame of which I am writing a very fast bot for. 
    - Repo will contain the how to play when published.
  - BRANCH-32, the successor to [LALU-3.0](https://github.com/MaliciousFiles/LALU-3.0). 
-   - The latest version of the emulator is being worked on right now and when working will be published.
+   - The latest version of the emulator is being worked on right now and when working will be published. (Emulator is finished, formal spec if under development)
+ - A ChibiCC fork that compiles to B32.
+
+# Past Projects
+ - [Partially Ordered Operator Precedence](https://codeberg.org/ziglang/zig/pulls/30160) landed on master as of 2026 10-23!!!
 
 # Contact Me
  - [Github](https://github.com/CMDRZero) is where I primarily upload projects.

@@ -9,3 +9,6 @@
         "Temml.woff2",
     ],
 }),
+.supermd = .{
+    .headings_h2 = true,
+}

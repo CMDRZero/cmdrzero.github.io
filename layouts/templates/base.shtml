@@ -31,8 +31,8 @@
 		<super>
 		<footer>
 			<hr>
-			<h5>SITE UNDER CONSTRUCTION</h5>
-			<img src="$site.asset('under-construction.gif').link()" width=90>
+			<h5>——Zero——</h5>
+			<img src="$site.asset('face.png').link()" width=90>
 		</footer>
 	</body>
 </html>

@@ -1,0 +1,332 @@
+---
+.title = "First Post: My first Zig PR 400 days later",
+.date = .date("2026-10-24T00:00:00"),
+.layout = "post.shtml",
+---
+
+# Partially Ordered Operator Precedence (Coming to you this Zig 0.18.x)
+At 6ʰ01 UTC, Zig PR [#30160](https://codeberg.org/ziglang/zig/pulls/30160), was merged into master. 
+This PR was my first ever to an open project and it was finally merged in! Yay! But how did it all start, and what is Partially Ordered Operator Precedence, and how did I get here?
+
+## Origin
+2024, January 4th, I publicized a small GitHub project entitled [Monopoly-AI](https://github.com/CMDRZero/Monopoly-AI), with the description: 
+```
+An experiment with using Zig to write a monopoly AI. It would be more 
+concisely written in python, but I want to learn zig, and furthermore 
+need performance.
+```
+
+At that time I was in an Advanced CS class teaching C++. Deciding I was fed up with the strange quirks of C++, I set out to learn another language. 
+I found 4 languages I considered worthy: [Nim](https://nim-lang.org/), [Rust](https://rust-lang.org/), [D](https://dlang.org/), and [Zig](https://ziglang.org/).
+I then wrote a simple ECC implementation in each language and the first thing that stood out was: "Wow, Zig has any sized integers, that makes sense". In fact this
+stood out so much that I added it to my programming language near after, because "If the integers dont have names, but numbers, why should they be restriced to a finite set? What makes a u7 less allowed than a u8?"
+
+From then on I decided to learn Zig, it was eays to pick up (kind of), and felt the most natural. So I began making projects in it. Alot of projects. My old harddrive lists 34 projects made in the years 2024 and 2025.
+
+In general I felt that Zig was forcing me to be a better programmer. I had gotten very used to hacking together what I needed in python, and this made me lazy.
+Sometimes lazy is nice, but being correct also solves alot of issues. I began looking at the Zig open issues pages and I often loved seeing genuine discource about how to 
+make the language better. And then I began to think to myself: "Well, I love this language alot, what if I was to make a PR".
+
+And then I saw it: [Issue #114](https://github.com/ziglang/zig/issues/114): "require parentheses sometimes to disambiguate confusing operator precedence".
+
+This was an issue I had been facing myself while writing my own toy language. Operators were often unintuitive, and I wasnt sold on 
+[Ponylang](https://www.ponylang.io/)'s radical abolition of precedence altogether. Of all of the issues that I felt a connection to, this felt, doable. I hacked together a proof of concept in python, and wow, it was doable.
+```
+>>> Eval(ToNodeList("1 + 2 | 3"))
+Error on line:
+0000: 1 + 2 | 3
+      --^---^--
+Ambigious precedence between operators, please use parentheses
+```
+In retrospect the code was abysmal and I added features I definately didnt need for a proof of concept, but it worked.
+
+## The Hard Part
+Encouraged by my proof of concept, I cloned Zig and tried to build from source. This, it would turn out, is confusing, but only because Im bad at reading.
+
+[](<$image.asset("ZigFirstPrCommitment.png")>)
+[](<$image.asset("Errors.png")>)
+[](<$image.asset("Bootstrapping.png")>)
+[](<$image.asset("PassingTests.png")>)
+[](<$image.asset("Changes.png")>)
+
+Then, on 2025 Sep-18th, I opened [PR #25275](https://github.com/ziglang/zig/pull/25275). 
+
+In retrospect, very few changes have remained the same, but I think theyre interesting so lets talk about them shall we?
+
+## Pratt Parsing
+This was the largest hiccup I encountered when I went to implement partial ordering, Zig uses pratt parsing, while my python code had used a wierd strategy. 
+What it had done there was to take a flat list of tokens in an expression, then find the highest precedence, and resolve it and put back a node reference.
+This meant a linear traversal for every operator as it looked at itself and the previous highest and tried to detect if the relationship was ambiguous. 
+This was a terrible strategy, and worse yet, the dreaded comparison tree ended up in Zig.
+
+```python
+def Order(a, b):
+    r = _Order(a, b)
+    if r == None:
+        r2 = _Order(b, a)
+        if r2 == None: return None
+        r = -r2
+    return r
+
+def _Order(a, b):
+    if a == b: return 0
+    if a[0] == 's':
+        if b[0] == 's': return 0
+        if b[0] in 'pabcl': return +1
+    if a[0] == 'p':
+        if b[0] == 'p': return 0
+        if b[0] in 'abcl': return +1
+    if a[0] == 'a':
+        if b[0] == 'a':
+            if a == 'a0a' and b == 'a1': return +1
+            if a == 'a0b' and b == 'a1': return +1
+            if a == 'a0a' and b == 'a0b': return 0
+        if b[0] in 'cl': return +1
+    if a[0] == 'b':
+        if b[0] == 'b':
+            if a == 'b0' and b == 'b1': return +1
+            if a == 'b0' and b == 'b3': return +1
+            if a == 'b1' and b == 'b3': return +1
+        if b[0] in 'cl': return +1
+    if a[0] == 'c':
+        if b[0] == 'c': return 0
+        if b[0] in 'l': return +1
+    if a[0] == 'l':
+        if b[0] == 'l':
+            if a == 'l0' and b == 'l1': return +1
+```
+
+So, what is pratt parsing? Well its a simple way to declaratively specify what precedence different operators have and parse it 
+efficiently without duplicating code for recursive descent. 
+
+Lets look at a simplified version of how Zig uses it:
+```
+fn parseExprPrecedence(p: *Parse, min_prec: i32) Error!?Node.Index {
+    assert(min_prec >= 0);
+    var node = try p.parsePrefixExpr() orelse return null;
+    while (true) {
+        const info = //Get Next Operator Info
+        if (info.prec < min_prec) break;
+
+        const oper_token = p.nextToken();
+
+        const rhs = try p.parseExprPrecedence(info.prec + 1) orelse { 
+            try p.warn(.expected_expr);
+            return node;
+        };
+
+        node = try p.addNode(.{
+            .tag = info.tag,
+            .main_token = oper_token,
+            .data = .{ .node_and_node = .{ node, rhs } },
+        });
+    }
+
+    return node;
+```
+
+In short, we start with a minimum precedence of the operator before and we injest operators left to right. If it binds looser we dont 
+consume it and release the node we have. If it binds the same or higher we then try to recursively call using one higher than that operator. 
+As long as every operator binds tighter than a baseline value (0), then it will always eventually succeed. 
+
+Here is a crude diagram
+```
+      1 + 2 * 3 * 4 ;
+min 0 ---
+min 1    ----
+min 2        ---!
+```
+When the multiplication recursed, it found itself and rolled back, yielding the `3` node
+```
+      1 + 2 * 3 * 4 ;
+min 0 ---
+min 1    ---^   -
+min 2            ---!
+```
+Next our addition call continues, finds the second multiplication and recursed on it, erroring on the semicolon.
+```
+      1 + 2 * 3 * 4 ;
+min 0 ---
+min 1   ----^   ^   !
+```
+Now our addition hits the end and sees it cannot absorb the semicolon. It yields a node to the above.
+```
+      1 + 2 * 3 * 4 ;
+min 0 --^,          -
+```
+Finally we see the start hits the semicolon and we close out.
+
+So how do we add partial ordering? Well, we can rewrite the above code to have the supplied precedence be cutoff, or `min_prec_exc` as I called it.
+This means that we change `info.prec < min_prec` into `info.prec <= min_prec_exc`, and we pass the precedence of the last operator directly. 
+
+Since arithmetic has been removed and we only pass around values themselves, we can shift from integers to abstract order groups. 
+In the old version, this was an enum plus an integer pair. This was a mistake and it made the code inscrutible. In the modern version 
+we use a single enum which clearly spells out what it corresponds to such as `.arithmetic_product_chainable`.
+
+Additionally, in the modern version, rather than a cryptic tree, we use a comparison matrix which is initialized as comptime with declarative relationship.
+
+This set of legal edges is the heart of partial precedence.
+
+## What is Partial Operator Precedence?
+As we've established, most programming languages have an order for all operators, converting any sequence of `A @ B # C $ D` into an ordered series of instruction.
+But as we've also established, its not always immediately clear what that order is. What is the result of `A ^ B + C`? Is it even consistant across languages?
+
+So instead partial precedence only declares a relationship between some operators, and if while parsing it needs to figure out which to perform first and there isnt
+a relationship, rather than using a cryptic table, it aborts. Those edges look like this graph:
+
+```=html
+<pre><code>
+                     ┏━━━━━━━━━━━━━━━━━━━┓   
+                     ┃(expr)             ┃                  
+                     ┃x() x[] x.y x.* x.?┃                  
+                     ┃E!T                ┃                  
+                     ┃x{}                ┃                  
+                     ┃!x -x -%x ~x &x ?x ┃                  
+                     ┗━━━━━━━━━▲━━━━━━━━━┛                  
+          ┌─────────────┬──────┴───────┬───────┬──┬──┬─┐         
+          │             │              │       │  │  │ │         
+   ┏━━━━━━┷━━━━━┓╭Non╌Chaining╮ ╭Non╌Chaining╮┏┷┓┏┷┓┏┷┓│         
+   ┃* *% *| / ||┃╎      %     ╎ ╎ &lt;&lt; &lt;&lt;|  >> ╎┃&┃┃^┃┃|┃│         
+   ┗━━━━━━▲━━━━━┛╰╌╌╌╌╌╌▲╌╌╌╌╌╯ ╰╌╌╌╌╌╌▲╌╌╌╌╌╯┗▲┛┗▲┛┗▲┛│         
+       ┏━━┷━━━━━━━━━━━━━┷━┓       ┌────┴───────┴──┴──┘ │         
+       ┃+ - +% -% +| -| ++┃       │                    │         
+       ┗━━━━━━━━━━━▲━━━━━━┛       │                    │         
+                  ╭┴╌Non-Chaining╌┴╮                   │         
+                  ╎== !=  &lt; &lt;= >= >╎                   │         
+                  ╰╌╌╌▲╌╌╌╌▲╌╌╌╌╌╌╌╯      ┌──────┬─────┘                
+                    ┏━┷━┓┏━┷━┓        ┏━━━┷━━┓┏━━┷━━┓                  
+                    ┃and┃┃or ┃        ┃orelse┃┃catch┃                  
+                    ┗━▲━┛┗━▲━┛        ┗━━━▲━━┛┗━━▲━━┛                  
+                   ╭╌╌┴╌╌╌╌┴╌╌╌╌╌╌╌╌╌╌╌╌╌╌┴╌╌╌╌╌╌┴╌╮ 
+                   ╎    Any expression location    ╎ 
+                   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯ 
+                                                              
+      </code></pre>
+```
+Every single arrow is an edge, and if there isnt a direct ancestory line from a given operator to another, the precedence is undefined. 
+This is what lets us keep some things like classical arithmetic (and extensions) ordered while making the intermixing of bitwise with eachother or
+arithmetic an error. 
+
+This is also explained well on the [Zig Langref](https://www.ryanliptak.com/misc/langref-precedence.html). 
+
+## Ok wait, why 400 days?
+Long story short, Im not exactly sure, but I knew this was a good addition, so I kept fixing upstream code as it was merged into 
+master and collecting a mountain of parenthetizations. Then, in 2025's december or so, Zig moved from Github to Codeberg. At first 
+panicked since my PR was frozen, but after I realized what happened, I decided to remove the precedence tree (good riddance), and move to codeberg.
+
+2025 Dec 9th, I opened [Zig PR #30160](https://codeberg.org/ziglang/zig/pulls/30160). At this point in time, my precedence looked different 
+than what landed as the team perferred a reduced table. 
+The original design for the flowchart above:
+```
+                        ┌───Suffix─&─Prefix───┐                      
+                        │┌───────────────────┐│                      
+                        ││x() x[] x.y x.* x.?││                      
+                        ││a!b                ││                      
+                        ││x{}                ││                      
+                        ││!x -x -%x ~x &x ?x ││                      
+                        │└───────────────────┘│                      
+                        └─┬────────────────┬──┘                      
+                          │                │                         
+                ┌─────────┘                ▼                         
+                │                    ┌──Bitwise──┐                   
+                ▼                    │┌─────────┐│                   
+┌───────────Arithmetic───────────┐   ││<< <<| >>││                   
+│┌────────────┐    ┌Non-Chaining┐│   │└────┬────┘│                   
+││* *% *| / ||│◄──►│    ** %    ││   │     │     │                   
+│└───────┬────┘    └────┬───────┘│   │    ┌▼┐    │                   
+│        │              │        │   │    │&│    │                   
+│      ┌─▼──────────────▼─┐      │   │    └┬┘ ┌─┐│                   
+│      │+ - +% -% +| -| ++│      │   │     │  │^││                   
+│      └──────────────────┘      │   │    ┌▼┐ └─┘│                   
+└─────────────────────────────┬──┘   │    │|│    │                   
+                              │      │    └─┘    │                   
+                              │      └───┬───────┘                   
+                              │          │                           
+                            ┌─▼─Coercion─▼─┐                         
+                            │┌────────────┐│                         
+                            ││orelse catch││                         
+                            │└────────────┘│                         
+                            └──────┬───────┘                         
+                                   ▼                                 
+                          ┌────Comparison────┐                       
+                          │┌──Non-Chaining──┐│                       
+                          ││== !=  < <= >= >││                       
+                          │└────────────────┘│                       
+                          └────────┬─────────┘                       
+                                   ▼                                 
+                               ┌Logical┐                             
+                               │ ┌───┐ │                             
+                               │ │and│ │                             
+                               │ └─┬─┘ │                             
+                               │   │   │                             
+                               │ ┌─▼─┐ │                             
+                               │ │or │ │                             
+                               │ └───┘ │                             
+                               └───┬───┘                             
+                                   ▼                                 
+   ┌───────────────────────────Assignment───────────────────────────┐
+   │┌─────────────────────────Non-Chaining─────────────────────────┐│
+   ││= *= *%= *|= /= %= += +%= +|= -= -%= -|= <<= <<|= >>= &= ^= |=││
+   │└──────────────────────────────────────────────────────────────┘│
+   └────────────────────────────────────────────────────────────────┘
+```
+I stand by my old decision (which is why its this order in LLPC), but I understand the teams decision, its easier to add edges 
+than remove them, which breaks backward compatibility; better a big break now than a bunch of small breaks in the future.
+
+So for a long time I just kept keeping my PR up to date. Everyonce in a while I'd see a message informing me to rebase but that was it. I was in the dark.
+
+And then, 2026 Jun 8th, I saw a message that made me beyond excited: 
+```
+Hey, thanks for working on this, sorry it's taken so long to 
+get any attention. I'd like to help get this landed.
+    —Ryan Liptak
+```
+
+From then on I had a new energy and I began work on a draft of the langref. This was also the time I significantlty overhauled the error messages.
+Also since I had been constantly fighting windows I moved my computer to dual boot linux and I have not regretted my decision.
+
+For context, heres what an old message looked like:
+```
+.../main.zig:16:18: error: ambiguous operator precedence
+    return a | b & c;
+                 ^
+```
+VS Now
+```
+.../main.zig:16:18: error: ambiguous operator precedence with operators … | … & …; use parentheses to disambiguate
+    return a | b & c;
+                 ^
+.../main.zig:16:14: note: previous ambiguous operator here
+    return a | b & c;
+             ^
+.../main.zig:16:18: note: in zig 0.17.x, this was evaluated as `(... | ...) & ...` ?
+```
+
+With improved error messages and a langref draft under my belt I moved to making `zig fmt` automatically fix parenthesis.
+This was a long battle and ultimately Ryan Liptak wrote most of the final code, but I was able to pull in a fix I had found to a bug that
+sometimes duplicated comments.
+
+Then it was a waiting game. I kept the PR up to date, fixed issues when I could, and finally, CI passed and the code was merged.
+
+## Retrospective
+This PR was a long time in the making. My first ever PR on any project, and its likely one that people will feel (and post angry messages on Ziggit.dev).
+
+Was it worth it?
+
+Hell yeah, the Zig compiler itself is such a goldmine of code and the high expectations made me improve of a programmer. When I started I had under a year of Zig in my belt.
+This december will be my 3rd year of Zig, and Im grateful such a team of talented people is dedicated to making such an amazing language. 
+
+Will I do it again?
+
+Probably, I'm eye a few new PRs to make my next task and hopefully I've shown myself to be competant.
+
+What are you most proud of?
+
+1. Im quite proud of my table driven comparisons. I like the declarative edges and letting everything else fall from that
+2. I really like how the error message shows you the ambiguous operators, this involved using a token offset and grabbing the lexemes and I love that it just works :)
+3. `zig fmt --upgrade`, I cannot believe I was maintaining this code for 10 months without this to make it a command call.
+
+## Extra Goodies
+After my reinvigoration, I wrote a python script to visualize what was occuring during the comptime initialization, and I found it really insightful. Heres a GIF of it running
+
+[]($image.asset("pygame_output.gif"))
